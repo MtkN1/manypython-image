@@ -1,0 +1,16 @@
+ARG UBUNTU_RELESE=noble \
+    MANYPYTHON_BIN_IMAGE=manypython-bin
+
+FROM $MANYPYTHON_BIN_IMAGE:3.9-$UBUNTU_RELESE AS base-3.9
+FROM $MANYPYTHON_BIN_IMAGE:3.10-$UBUNTU_RELESE AS base-3.10
+FROM $MANYPYTHON_BIN_IMAGE:3.11-$UBUNTU_RELESE AS base-3.11
+FROM $MANYPYTHON_BIN_IMAGE:3.12-$UBUNTU_RELESE AS base-3.12
+FROM $MANYPYTHON_BIN_IMAGE:3.13-$UBUNTU_RELESE AS base-3.13
+
+FROM buildpack-deps:$UBUNTU_RELESE
+
+COPY --from=base-3.9 /usr/local /usr/local
+COPY --from=base-3.10 /usr/local /usr/local
+COPY --from=base-3.11 /usr/local /usr/local
+COPY --from=base-3.12 /usr/local /usr/local
+COPY --from=base-3.13 /usr/local /usr/local
