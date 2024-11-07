@@ -17,7 +17,7 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          tags: manypython-deps:${{ env.UBUNTU_RELESE }}
+          tags: localhost:5000/manypython-deps:${{ env.UBUNTU_RELESE }}
           outputs: type=docker,dest=manypython-deps.tar
           file: Dockerfile.deps
 
@@ -59,7 +59,7 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          tags: manypython-bin:${{ matrix.python-version }}-${{ env.UBUNTU_RELESE }}
+          tags: localhost:5000/manypython-bin:${{ matrix.python-version }}-${{ env.UBUNTU_RELESE }}
           outputs: type=docker,dest=manypython-bin-${{ matrix.python-version }}.tar
           file: Dockerfile.build
           build-args: |
@@ -103,7 +103,7 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          tags: manypython-base:${{ env.UBUNTU_RELESE }}
+          tags: localhost:5000/manypython-base:${{ env.UBUNTU_RELESE }}
           outputs: type=docker,dest=manypython-base.tar
           file: Dockerfile.base
           build-args: |
