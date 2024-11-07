@@ -38,21 +38,32 @@ jobs:
           - "3.12"
           - "3.13"
       fail-fast: false
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: manypython-deps
 
-      - uses: docker/setup-buildx-action@v3
-
       - name: Load image
-        run: docker load --input manypython-deps.tar && docker images
+        run: |
+          docker load --input manypython-deps.tar
+          docker push localhost:5000/manypython-deps:$UBUNTU_RELESE
+        env:
+          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
+
+      - uses: docker/setup-buildx-action@v3
 
       - uses: docker/build-push-action@v6
         with:
           tags: manypython-bin:${{ matrix.python-version }}-${{ env.UBUNTU_RELESE }}
           outputs: type=docker,dest=manypython-bin-${{ matrix.python-version }}.tar
           file: Dockerfile.build
+          build-args: |
+            MANYPYTHON_DEPS_IMAGE=localhost:5000/manypython-deps
 
       - uses: actions/upload-artifact@v4
         with:
@@ -62,6 +73,11 @@ jobs:
   build-base:
     needs: build-binary
     runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -75,6 +91,13 @@ jobs:
           docker load --input manypython-bin-3.11.tar
           docker load --input manypython-bin-3.12.tar
           docker load --input manypython-bin-3.13.tar
+          docker push localhost:5000/manypython-bin:3.9-$UBUNTU_RELESE
+          docker push localhost:5000/manypython-bin:3.10-$UBUNTU_RELESE
+          docker push localhost:5000/manypython-bin:3.11-$UBUNTU_RELESE
+          docker push localhost:5000/manypython-bin:3.12-$UBUNTU_RELESE
+          docker push localhost:5000/manypython-bin:3.13-$UBUNTU_RELESE
+        env:
+          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
 
       - uses: docker/setup-buildx-action@v3
 
@@ -83,6 +106,8 @@ jobs:
           tags: manypython-base:${{ env.UBUNTU_RELESE }}
           outputs: type=docker,dest=manypython-base.tar
           file: Dockerfile.base
+          build-args: |
+            MANYPYTHON_BIN_IMAGE=localhost:5000/manypython-bin
 
       - uses: actions/upload-artifact@v4
         with:
