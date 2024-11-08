@@ -33,23 +33,14 @@ jobs:
   build-binary:
     needs: build-deps
     runs-on: ubuntu-latest
-    env: 
-      PYTHON_PATCH_VERSION: |
-        {
-          "3.9": "3.9.20",
-          "3.10": "3.10.15",
-          "3.11": "3.11.10",
-          "3.12": "3.12.7",
-          "3.13": "3.13.0"
-        }
     strategy:
       matrix:
         python-version:
-          - "3.9"
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
+          - "3.9.20"
+          - "3.10.15"
+          - "3.11.10"
+          - "3.12.7"
+          - "3.13.0"
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -62,19 +53,19 @@ jobs:
         run: docker load --input manypython-deps.tar
 
       - name: Build image
-        run: docker build -t "manypython-bin:${PYTHON_VERSION}-${UBUNTU_RELESE}" -f Dockerfile.build --build-arg "PYTHON_VERSION=${PYTHON_VERSION}" .
+        run: docker build -t "manypython-bin:${PYTHON_VERSION%.*}-${UBUNTU_RELESE}" -f Dockerfile.build --build-arg "PYTHON_VERSION=${PYTHON_VERSION}" .
         env:
           UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-          PYTHON_VERSION: ${{ fromJSON(env.PYTHON_PATCH_VERSION)[matrix.python-version] }}
+          PYTHON_VERSION: ${{ matrix.python-version }}
 
       - name: Test image
-        run: docker run --rm "manypython-bin:${PYTHON_VERSION}-${UBUNTU_RELESE}" "python${PYTHON_VERSION}" -V
+        run: docker run --rm "manypython-bin:${PYTHON_VERSION%.*}-${UBUNTU_RELESE}" "python${PYTHON_VERSION%.*}" -V
         env:
           UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
           PYTHON_VERSION: ${{ matrix.python-version }}
 
       - name: Save image
-        run: docker save --output "manypython-bin-${PYTHON_VERSION}.tar" "manypython-bin:${PYTHON_VERSION}-${UBUNTU_RELESE}"
+        run: docker save --output "manypython-bin-${PYTHON_VERSION%.*}.tar" "manypython-bin:${PYTHON_VERSION%.*}-${UBUNTU_RELESE}"
         env:
           UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
           PYTHON_VERSION: ${{ matrix.python-version }}
