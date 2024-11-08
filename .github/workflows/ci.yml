@@ -71,13 +71,13 @@ jobs:
         run: docker run --rm "manypython-bin:${PYTHON_VERSION}-${UBUNTU_RELESE}" "python${PYTHON_VERSION}" -V
         env:
           UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-          PYTHON_VERSION: ${{ fromJSON(env.PYTHON_PATCH_VERSION)[matrix.python-version] }}
+          PYTHON_VERSION: ${{ matrix.python-version }}
 
       - name: Save image
         run: docker save --output "manypython-bin-${PYTHON_VERSION}.tar" "manypython-bin:${PYTHON_VERSION}-${UBUNTU_RELESE}"
         env:
           UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-          PYTHON_VERSION: ${{ fromJSON(env.PYTHON_PATCH_VERSION)[matrix.python-version] }}
+          PYTHON_VERSION: ${{ matrix.python-version }}
 
       - uses: actions/upload-artifact@v4
         with:
