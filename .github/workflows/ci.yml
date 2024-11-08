@@ -113,7 +113,7 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          tags: localhost:5000/manypython-base:${{ env.UBUNTU_RELESE }}
+          tags: manypython-base:${{ env.UBUNTU_RELESE }}
           outputs: type=docker,dest=manypython-base.tar
           file: Dockerfile.base
           build-args: |
