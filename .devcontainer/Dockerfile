@@ -1,11 +1,11 @@
-ARG UBUNTU_RELESE=noble \
-    MANYPYTHON_BASE_IMAGE=manypython-base
+ARG UBUNTU_RELESE=noble
+ARG MANYPYTHON_BASE_IMAGE=manypython-base
 
 FROM $MANYPYTHON_BASE_IMAGE:$UBUNTU_RELESE
 
 LABEL dev.containers.features="common"
 
-ARG UBUNTU_RELESE=noble
+ARG UBUNTU_RELESE
 RUN if [ "$UBUNTU_RELESE" = "noble" ]; then \
         if id "ubuntu" &>/dev/null; then \
             echo "Deleting user 'ubuntu'  for $UBUNTU_RELESE" && userdel -f -r ubuntu || echo "Failed to delete ubuntu user for $UBUNTU_RELESE"; \  

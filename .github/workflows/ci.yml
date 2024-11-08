@@ -141,7 +141,7 @@ jobs:
 
       - run: npm install -g @devcontainers/cli
 
-      - run: devcontainer build --image-name manypython-dev --workspace-folder .
+      - run: devcontainer build --image-name manypython-dev:${{ env.UBUNTU_RELESE }} --workspace-folder .
 
       - run: docker save -o manypython-dev.tar manypython-dev
 
