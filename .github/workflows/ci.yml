@@ -49,31 +49,38 @@ jobs:
         with:
           name: manypython-deps
 
+      - name: Set minor version
+        id: set-minor
+        run: echo "python-minor-version=${PYTHON_PATCH_VERSION%.*}" | tee -a "${GITHUB_OUTPUT}"
+        env:
+          PYTHON_PATCH_VERSION: ${{ matrix.python-version }}
+
       - name: Load image
         run: docker load --input manypython-deps.tar
 
       - name: Build image
-        run: docker build -t "manypython-bin:${PYTHON_VERSION%.*}-${UBUNTU_RELESE}" -f Dockerfile.build --build-arg "PYTHON_VERSION=${PYTHON_VERSION}" .
+        run: docker build -t "manypython-bin:${PYTHON_MINOR_VERSION}-${UBUNTU_RELESE}" -f Dockerfile.build --build-arg "PYTHON_VERSION=${PYTHON_PATCH_VERSION}" .
         env:
           UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-          PYTHON_VERSION: ${{ matrix.python-version }}
+          PYTHON_PATCH_VERSION: ${{ matrix.python-version }}
+          PYTHON_MINOR_VERSION: ${{ steps.set-minor.outputs.python-minor-version }}
 
       - name: Test image
-        run: docker run --rm "manypython-bin:${PYTHON_VERSION%.*}-${UBUNTU_RELESE}" "python${PYTHON_VERSION%.*}" -V
+        run: docker run --rm "manypython-bin:${PYTHON_MINOR_VERSION}-${UBUNTU_RELESE}" "python${PYTHON_MINOR_VERSION}" -V
         env:
           UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-          PYTHON_VERSION: ${{ matrix.python-version }}
+          PYTHON_MINOR_VERSION: ${{ steps.set-minor.outputs.python-minor-version }}
 
       - name: Save image
-        run: docker save --output "manypython-bin-${PYTHON_VERSION%.*}.tar" "manypython-bin:${PYTHON_VERSION%.*}-${UBUNTU_RELESE}"
+        run: docker save --output "manypython-bin-${PYTHON_MINOR_VERSION}.tar" "manypython-bin:${PYTHON_MINOR_VERSION}-${UBUNTU_RELESE}"
         env:
           UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-          PYTHON_VERSION: ${{ matrix.python-version }}
+          PYTHON_MINOR_VERSION: ${{ steps.set-minor.outputs.python-minor-version }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: manypython-bin-${{ matrix.python-version }}
-          path: manypython-bin-${{ matrix.python-version }}.tar
+          name: manypython-bin-${{ steps.set-minor.outputs.python-minor-version }}
+          path: manypython-bin-${{ steps.set-minor.outputs.python-minor-version }}.tar
 
   build-base:
     needs: build-binary
