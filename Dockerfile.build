@@ -1,0 +1,24 @@
+ARG UBUNTU_RELESE=noble \
+    MANYPYTHON_DEPS_IMAGE=manypython-deps
+
+FROM $MANYPYTHON_DEPS_IMAGE:$UBUNTU_RELESE
+    
+ARG PYTHON_VERSION=3.13.0
+
+RUN set -eux; \
+    \
+    wget -O python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz"; \
+    mkdir -p /usr/src/python; \
+    tar --extract --directory /usr/src/python --strip-components=1 --file python.tar.xz; \
+    rm python.tar.xz; \
+    \
+    cd /usr/src/python; \
+    ./configure \
+        --with-ensurepip=no \
+    ; \
+    nproc="$(nproc)"; \
+    make -j "$nproc" ; \
+    make altinstall; \
+    \
+    cd /; \
+    rm -rf /usr/src/python
