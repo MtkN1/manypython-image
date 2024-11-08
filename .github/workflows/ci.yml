@@ -8,7 +8,7 @@ on:
       - main
   workflow_dispatch:
 env:
-  UBUNTU_RELESE: "noble"
+  UBUNTU_RELESE: noble
 jobs:
   build-deps:
     runs-on: ubuntu-latest
@@ -33,6 +33,15 @@ jobs:
   build-binary:
     needs: build-deps
     runs-on: ubuntu-latest
+    env: 
+      PYTHON_PATCH_VERSION: |
+        {
+          "3.9": "3.9.7",
+          "3.10": "3.10.0",
+          "3.11": "3.11.0",
+          "3.12": "3.12.0",
+          "3.13": "3.13.0"
+        }
     strategy:
       matrix:
         python-version:
@@ -70,8 +79,16 @@ jobs:
           file: Dockerfile.build
           build-args: |
             MANYPYTHON_DEPS_IMAGE=localhost:5000/manypython-deps
+            PYTHON_VERSION=${{ fromJSON(env.PYTHON_PATCH_VERSION)[matrix.python-version] }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Test python command
+        run: |
+          docker run --rm localhost:5000/manypython-bin:$PYTHON_VERSION-$UBUNTU_RELESE python$PYTHON_VERSION -V
+        env:
+          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
+          PYTHON_VERSION: ${{ matrix.python-version }}
 
       - uses: actions/upload-artifact@v4
         with:
