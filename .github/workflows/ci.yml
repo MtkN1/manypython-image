@@ -8,30 +8,11 @@ on:
       - main
   workflow_dispatch:
 env:
-  UBUNTU_RELESE: noble
+  BASE_IMAGE: buildpack-deps
+  VARIANT: noble
+  OUTPUT_IAMGE: mtkn1.ghcr.io/manypython-image
 jobs:
-  build-deps:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build image
-        run: docker build -t "manypython-deps:${UBUNTU_RELESE}" -f Dockerfile.deps .
-        env:
-          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-
-      - name: Save image
-        run: docker save --output manypython-deps.tar "manypython-deps:${UBUNTU_RELESE}"
-        env:
-          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: manypython-deps
-          path: manypython-deps.tar
-
-  build-binary:
-    needs: build-deps
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -43,112 +24,80 @@ jobs:
           - "3.13.0"
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
 
-      - uses: actions/download-artifact@v4
+      - uses: docker/build-push-action@v6
         with:
-          name: manypython-deps
+          build-args: |
+            BASE_IMAGE=${{ env.BASE_IMAGE }}
+            VARIANT=${{ env.VARIANT }}
+            PYTHON_VERSION=${{ matrix.python-version }}
+          file: Docker.build
+          outputs: type=local,dest=rootfs-${{ matrix.python-version }}
 
-      - name: Set minor version
-        id: set-minor
-        run: echo "python-minor-version=${PYTHON_PATCH_VERSION%.*}" | tee -a "${GITHUB_OUTPUT}"
+      - name: Create rootfs tarball
+        run: tar -C "rootfs-$PYTHON_VERSION" -cf "rootfs-$PYTHON_VERSION.tar" usr/local
         env:
-          PYTHON_PATCH_VERSION: ${{ matrix.python-version }}
-
-      - name: Load image
-        run: docker load --input manypython-deps.tar
-
-      - name: Build image
-        run: docker build -t "manypython-bin:${PYTHON_MINOR_VERSION}-${UBUNTU_RELESE}" -f Dockerfile.build --build-arg "PYTHON_VERSION=${PYTHON_PATCH_VERSION}" .
-        env:
-          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-          PYTHON_PATCH_VERSION: ${{ matrix.python-version }}
-          PYTHON_MINOR_VERSION: ${{ steps.set-minor.outputs.python-minor-version }}
-
-      - name: Test image
-        run: docker run --rm "manypython-bin:${PYTHON_MINOR_VERSION}-${UBUNTU_RELESE}" "python${PYTHON_MINOR_VERSION}" -V
-        env:
-          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-          PYTHON_MINOR_VERSION: ${{ steps.set-minor.outputs.python-minor-version }}
-
-      - name: Save image
-        run: docker save --output "manypython-bin-${PYTHON_MINOR_VERSION}.tar" "manypython-bin:${PYTHON_MINOR_VERSION}-${UBUNTU_RELESE}"
-        env:
-          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-          PYTHON_MINOR_VERSION: ${{ steps.set-minor.outputs.python-minor-version }}
+          PYTHON_VERSION: ${{ matrix.python-version }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: manypython-bin-${{ steps.set-minor.outputs.python-minor-version }}
-          path: manypython-bin-${{ steps.set-minor.outputs.python-minor-version }}.tar
+          name: rootfs-${{ matrix.python-version }}
+          path: rootfs-${{ matrix.python-version }}.tar
 
-  build-base:
-    needs: build-binary
-    runs-on: ubuntu-latest
+  image:
+    needs: build
+    runs-on: ubuntu-latesit
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/download-artifact@v4
         with:
-          pattern: manypython-bin-*
+          pattern: rootfs-*
           merge-multiple: true
 
-      - name: Load image
+      - name: Combine rootfs
         run: |
-          docker load --input manypython-bin-3.9.tar
-          docker load --input manypython-bin-3.10.tar
-          docker load --input manypython-bin-3.11.tar
-          docker load --input manypython-bin-3.12.tar
-          docker load --input manypython-bin-3.13.tar
+          for rootfs_tar in rootfs-*.tar; do
+            rootfs_dir=$(basename $rootfs_tar .tar)
+            mkdir "$rootfs_dir"
+            tar -C "$rootfs_dir" -xf "$rootfs_tar"
+            tar -C "$rootfs_dir" -rf rootfs.tar usr/local
+          done
 
-      - name: Build image
-        run: docker build -t "manypython-base:${UBUNTU_RELESE}" -f Dockerfile.base .
-        env:
-          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Test image
-        run: |
-          docker run --rm "manypython-base:${UBUNTU_RELESE}" "python3.9" -V
-          docker run --rm "manypython-base:${UBUNTU_RELESE}" "python3.10" -V
-          docker run --rm "manypython-base:${UBUNTU_RELESE}" "python3.11" -V
-          docker run --rm "manypython-base:${UBUNTU_RELESE}" "python3.12" -V
-          docker run --rm "manypython-base:${UBUNTU_RELESE}" "python3.13" -V
-        env:
-          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
-
-      - name: Save image
-        run: docker save --output "manypython-base.tar" "manypython-base:${UBUNTU_RELESE}"
-        env:
-          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
+      - uses: docker/build-push-action@v6
+        with:
+          tags: |
+            ${{ env.OUTPUT_IAMGE }}:${{ github.sha }}
+            ${{ env.OUTPUT_IAMGE }}:${{ env.VARIANT }}
+            ${{ env.OUTPUT_IAMGE }}:latest
+          outputs: type=docker,dest=manypython-image.tar
 
       - uses: actions/upload-artifact@v4
         with:
-          name: manypython-base
-          path: manypython-base.tar
+          name: manypython-image
+          path: manypython-image.tar
 
   build-dev:
-    needs: build-base
+    needs: image
     runs-on: ubuntu-latest
+    if: false # TODO: build dev container
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
         with:
-          name: manypython-base
+          name: manypython-image
 
       - name: Load image
-        run: docker load --input manypython-base.tar
+        run: docker load --input manypython-image.tar
 
       - run: npm install -g @devcontainers/cli
 
-      - run: devcontainer build --image-name "manypython-dev:${UBUNTU_RELESE}" --workspace-folder .
-        env:
-          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
+      - run: devcontainer build --image-name "manypython-dev:$VARIANT" --workspace-folder .
 
       - name: Save image
-        run: docker save --output manypython-dev.tar "manypython-dev:${UBUNTU_RELESE}"
-        env:
-          UBUNTU_RELESE: ${{ env.UBUNTU_RELESE }}
+        run: docker save --output manypython-dev.tar "manypython-dev:$VARIANT"
 
       - uses: actions/upload-artifact@v4
         with:

@@ -1,0 +1,8 @@
+ARG BASE_IMAGE="buildpack-deps" \
+    VARIANT="noble"
+
+FROM ${BASE_IMAGE}:${VARIANT}
+
+ARG ROOTFS_TAR="rootfs.tar"
+
+ADD ${ROOTFS_TAR} /
