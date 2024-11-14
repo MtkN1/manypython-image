@@ -32,7 +32,7 @@ jobs:
             BASE_IMAGE=${{ env.BASE_IMAGE }}
             VARIANT=${{ env.VARIANT }}
             PYTHON_VERSION=${{ matrix.python-version }}
-          file: Docker.build
+          file: Dockerfile.build
           outputs: type=local,dest=rootfs-${{ matrix.python-version }}
 
       - name: Create rootfs tarball
@@ -67,11 +67,15 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
+          build-args: |
+            BASE_IMAGE=${{ env.BASE_IMAGE }}
+            VARIANT=${{ env.VARIANT }}
+          file: Dockerfile.final
+          outputs: type=docker,dest=manypython-image.tar
           tags: |
             ${{ env.OUTPUT_IAMGE }}:${{ github.sha }}
             ${{ env.OUTPUT_IAMGE }}:${{ env.VARIANT }}
             ${{ env.OUTPUT_IAMGE }}:latest
-          outputs: type=docker,dest=manypython-image.tar
 
       - uses: actions/upload-artifact@v4
         with:
