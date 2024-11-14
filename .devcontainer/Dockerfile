@@ -1,4 +1,4 @@
-ARG BASE_IMAGE="mtkn1.ghcr.io/manypython-image"
+ARG BASE_IMAGE="ghcr.io/mtkn1/manypython-image"
 ARG VARIANT="noble"
 FROM $BASE_IMAGE:${VARIANT}
 
