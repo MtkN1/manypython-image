@@ -33,10 +33,13 @@ jobs:
             VARIANT=${{ env.VARIANT }}
             PYTHON_VERSION=${{ matrix.python-version }}
           file: Dockerfile.build
-          outputs: type=local,dest=rootfs-${{ matrix.python-version }}
+          outputs: type=tar,dest=rootfs-${{ matrix.python-version }}.tar # FIXME: It should be type=local, but that doesn't finish exporting
 
       - name: Create rootfs tarball
-        run: tar -C "rootfs-$PYTHON_VERSION" -cf "rootfs-$PYTHON_VERSION.tar" usr/local
+        run: |
+          mkdir "rootfs-$PYTHON_VERSION"
+          tar -C "rootfs-$PYTHON_VERSION" -xf "rootfs-$PYTHON_VERSION.tar" usr/local # Temporary extraction (due to type=tar)
+          tar -C "rootfs-$PYTHON_VERSION" -cf "rootfs-$PYTHON_VERSION.tar" usr/local
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
 
