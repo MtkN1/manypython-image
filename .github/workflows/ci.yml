@@ -52,6 +52,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           pattern: rootfs-*
@@ -73,6 +75,7 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ env.BASE_IMAGE }}
             VARIANT=${{ env.VARIANT }}
+          context: .
           file: Dockerfile.final
           outputs: type=docker,dest=manypython-image.tar
           tags: |
