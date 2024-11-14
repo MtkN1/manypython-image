@@ -1,9 +1,11 @@
-ARG UBUNTU_RELESE=noble \
-    MANYPYTHON_DEPS_IMAGE=manypython-deps
+ARG BASE_IMAGE="buildpack-deps" \
+    VARIANT="noble"
 
-FROM $MANYPYTHON_DEPS_IMAGE:$UBUNTU_RELESE
+# Build
+# ------------------------------------------------------------------------------
+FROM $BASE_IMAGE:$VARIANT AS build
     
-ARG PYTHON_VERSION=3.13.0
+ARG PYTHON_VERSION="3.13.0"
 
 RUN set -eux; \
     \
@@ -22,3 +24,13 @@ RUN set -eux; \
     \
     cd /; \
     rm -rf /usr/src/python
+
+# You must export the "/usr/local" directory to "rootfs.tar" outside of the Dockerfile.
+
+# Runtime
+# ------------------------------------------------------------------------------
+FROM $BASE_IMAGE:$VARIANT AS runtime
+
+ARG ROOTFS_TAR="rootfs.tar"
+
+ADD $ROOTFS_TAR /
