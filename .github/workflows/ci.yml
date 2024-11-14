@@ -10,7 +10,9 @@ on:
 env:
   BASE_IMAGE: buildpack-deps
   VARIANT: noble
-  OUTPUT_IAMGE: mtkn1.ghcr.io/manypython-image
+  REGISTRY: ghcr.io
+  OUTPUT_IMAGE: manypython-image
+  DEVCONTAINER_IMAGE: manypython-dev
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,8 +34,8 @@ jobs:
             BASE_IMAGE=${{ env.BASE_IMAGE }}
             VARIANT=${{ env.VARIANT }}
             PYTHON_VERSION=${{ matrix.python-version }}
-          file: Dockerfile.build
           outputs: type=tar,dest=rootfs-${{ matrix.python-version }}.tar # FIXME: It should be type=local, but that doesn't finish exporting
+          target: build
 
       - name: Create rootfs tarball
         run: |
@@ -48,7 +50,7 @@ jobs:
           name: rootfs-${{ matrix.python-version }}
           path: rootfs-${{ matrix.python-version }}.tar
 
-  image:
+  runtime:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -70,46 +72,29 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      - uses: docker/login-action@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: docker/build-push-action@v6
         with:
           build-args: |
             BASE_IMAGE=${{ env.BASE_IMAGE }}
             VARIANT=${{ env.VARIANT }}
           context: .
-          file: Dockerfile.final
-          outputs: type=docker,dest=manypython-image.tar
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
-            ${{ env.OUTPUT_IAMGE }}:${{ github.sha }}
-            ${{ env.OUTPUT_IAMGE }}:${{ env.VARIANT }}
-            ${{ env.OUTPUT_IAMGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.OUTPUT_IMAGE }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.OUTPUT_IMAGE }}:${{ env.VARIANT }}
+            ${{ env.REGISTRY }}/${{ env.OUTPUT_IMAGE }}:latest
+          target: runtime
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: manypython-image
-          path: manypython-image.tar
-
-  build-dev:
-    needs: image
-    runs-on: ubuntu-latest
-    if: false # TODO: build dev container
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: manypython-image
-
-      - name: Load image
-        run: docker load --input manypython-image.tar
-
-      - run: npm install -g @devcontainers/cli
-
-      - run: devcontainer build --image-name "manypython-dev:$VARIANT" --workspace-folder .
-
-      - name: Save image
-        run: docker save --output manypython-dev.tar "manypython-dev:$VARIANT"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: manypython-dev
-          path: manypython-dev.tar
+      - name: Build and push Dev Container image
+        run: |
+          npm install -g @devcontainers/cli
+          devcontainer build --image-name "$REGISTRY/$DEVCONTAINER_IMAGE:$VARIANT" --push $push_flag --workspace-folder .
+        env:
+          push_flag: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
