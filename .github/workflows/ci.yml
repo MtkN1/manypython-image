@@ -11,6 +11,7 @@ env:
   BASE_IMAGE: buildpack-deps
   VARIANT: noble
   REGISTRY: ghcr.io
+  NAMESPACE: mtkn1 # FIXME: Use `github.repository_owner`, but it must be converted to lowercase
   OUTPUT_IMAGE: manypython-image
   DEVCONTAINER_IMAGE: manypython-dev
 jobs:
@@ -87,14 +88,14 @@ jobs:
           context: .
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
-            ${{ env.REGISTRY }}/${{ env.OUTPUT_IMAGE }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.OUTPUT_IMAGE }}:${{ env.VARIANT }}
-            ${{ env.REGISTRY }}/${{ env.OUTPUT_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.OUTPUT_IMAGE }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.OUTPUT_IMAGE }}:${{ env.VARIANT }}
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.OUTPUT_IMAGE }}:latest
           target: runtime
 
       - name: Build and push Dev Container image
         run: |
           npm install -g @devcontainers/cli
-          devcontainer build --image-name "$REGISTRY/$DEVCONTAINER_IMAGE:$VARIANT" --push $push_flag --workspace-folder .
+          devcontainer build --image-name "$REGISTRY/$NAMESPACE/$DEVCONTAINER_IMAGE:$VARIANT" --push $push_flag --workspace-folder .
         env:
           push_flag: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
