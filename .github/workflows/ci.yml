@@ -50,7 +50,7 @@ jobs:
 
   image:
     needs: build
-    runs-on: ubuntu-latesit
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
