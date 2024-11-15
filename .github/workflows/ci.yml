@@ -96,10 +96,11 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.OUTPUT_IMAGE }}:latest
           target: runtime
 
-      - name: Build and push Dev Container image
-        run: |
-          npm install -g @devcontainers/cli
-          devcontainer build --image-name "$REGISTRY/$NAMESPACE/$DEVCONTAINER_IMAGE:$VARIANT" --push $push_flag --workspace-folder .
-        env:
-          BASE_IMAGE: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.OUTPUT_IMAGE }}
-          push_flag: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      - uses: devcontainers/ci@v0.3
+        with:
+          imageName: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.OUTPUT_IMAGE }}
+          imageTag: dev-${{ env.VARIANT }}
+          env:
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.OUTPUT_IMAGE }}
+            VARIANT=${{ env.VARIANT }}
+          refFilterForPush: refs/heads/main
